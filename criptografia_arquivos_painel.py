@@ -12,7 +12,7 @@ PBKDF2_ITERATIONS = 200000
 
 arquivo_selecionado = None
 
-
+#primeiro a senha é convertida em bytes, usada junto com o salt
 def derivar_chave(senha, salt):
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -20,6 +20,7 @@ def derivar_chave(senha, salt):
         salt=salt,
         iterations=PBKDF2_ITERATIONS,
     )
+    #chave é derivada usando PBKDF2HMAC. 
     return kdf.derive(senha.encode())
 
 
@@ -46,17 +47,18 @@ def criptografar():
     try:
         with open(arquivo_selecionado, "rb") as f:
             dados = f.read()
-
+        #depois é gerado um salt e nonce aleatório
         salt = os.urandom(SALT_SIZE)
         nonce = os.urandom(NONCE_SIZE)
 
         chave = derivar_chave(senha, salt)
-
+        # O AESGCM é usado para criptografar os dados do arquivo 
         aesgcm = AESGCM(chave)
         cifrado = aesgcm.encrypt(nonce, dados, None)
 
         saida = arquivo_selecionado + ".enc"
 
+        # resultado salvo em um arquivo .enc.
         with open(saida, "wb") as f:
             f.write(salt + nonce + cifrado)
 
@@ -65,7 +67,7 @@ def criptografar():
     except Exception as e:
         messagebox.showerror("Erro", str(e))
 
-
+# para descriptografar o processo é invertido
 def descriptografar():
     global arquivo_selecionado
 
@@ -83,15 +85,17 @@ def descriptografar():
         with open(arquivo_selecionado, "rb") as f:
             conteudo = f.read()
 
+        # o salt e o nonce sao extraídos do arquivo criptografado
         salt = conteudo[:SALT_SIZE]
         nonce = conteudo[SALT_SIZE:SALT_SIZE+NONCE_SIZE]
         dados = conteudo[SALT_SIZE+NONCE_SIZE:]
 
+        # a chave é derivada novamente usando a senha e o salt
         chave = derivar_chave(senha, salt)
-
+        # e os dados sao descriptografados usando AESGCM. 
         aesgcm = AESGCM(chave)
         original = aesgcm.decrypt(nonce, dados, None)
-
+        # resultado é salvo em .restaurado.
         saida = arquivo_selecionado.replace(".enc", "") + ".restaurado"
 
         with open(saida, "wb") as f:
@@ -103,7 +107,7 @@ def descriptografar():
         messagebox.showerror("Erro", "Senha incorreta ou arquivo inválido.")
 
 
-# Interface gráfica
+# tinker interface
 
 janela = tk.Tk()
 janela.title("Gerenciador de Criptografia")
